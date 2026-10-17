@@ -1,0 +1,26 @@
+{
+  "name": "coding-guidelines",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "preview": "astro preview",
+    "typecheck": "astro sync && tsc"
+  },
+  "devDependencies": {
+    "@astrojs/markdown-remark": "7.3.3",
+    "@astrojs/starlight": "0.42.6",
+    "@types/node": "26.6.5",
+    "astro": "7.4.0",
+    "oxfmt": "^0.73.0",
+    "sharp": "0.35.5",
+    "starlight-theme-black": "0.7.1",
+    "typescript": "7.0.2",
+    "yaml": "2.9.1"
+  },
+  "packageManager": "pnpm@12.11.2"
+}

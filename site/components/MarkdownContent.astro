@@ -1,0 +1,89 @@
+---
+import Default from "@astrojs/starlight/components/MarkdownContent.astro";
+import { getCollection } from "astro:content";
+
+import Inline from "./Inline.astro";
+
+const { id, entry } = Astro.locals.starlightRoute;
+const data = entry.data;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const href = (docId: string) => `${base}${docId}/`;
+
+const docs = await getCollection("docs");
+const rulesOf = (packId: string) =>
+  docs
+    .filter((doc) => doc.id.startsWith(`${packId}/rules/`))
+    .sort((a, b) => a.data.title.localeCompare(b.data.title));
+const packs = docs
+  .filter((doc) => /^packs\/[^/]+$/.test(doc.id))
+  .sort((a, b) => a.id.localeCompare(b.id));
+
+const isRule = /^packs\/[^/]+\/rules\/[^/]+$/.test(id);
+const isPack = /^packs\/[^/]+$/.test(id);
+const isHome = id === "";
+---
+
+<Default>
+  {
+    isRule && (
+      <ul class="rule-meta">
+        <li>
+          <strong>Severity:</strong> {data.severity}
+        </li>
+        <li>
+          <strong>Applies when:</strong> <Inline text={data.applies_when} />
+        </li>
+        {data.source && (
+          <li>
+            <strong>Source:</strong>{" "}
+            {data.source.map((source, i) => (
+              <>
+                {i > 0 && ", "}
+                {source.url ? <a href={source.url}>{source.title}</a> : source.title}
+              </>
+            ))}
+          </li>
+        )}
+      </ul>
+    )
+  }
+  {
+    isPack && (
+      <p>
+        <strong>Applies when:</strong> <Inline text={data.applies_when} />
+      </p>
+    )
+  }
+  <slot />
+  {
+    isPack && (
+      <>
+        <h2 id="rules">Rules</h2>
+        <ul>
+          {rulesOf(id).map((rule) => (
+            <li>
+              <a href={href(rule.id)}>{rule.data.title}</a> ({rule.data.severity}).{" "}
+              <Inline text={rule.data.summary} />
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+  {
+    isHome && (
+      <>
+        <h2 id="packs">Packs</h2>
+        <ul>
+          {packs.map((pack) => (
+            <li>
+              <a href={href(pack.id)}>{pack.data.title}</a>. Applies when:{" "}
+              <Inline text={pack.data.applies_when} /> {rulesOf(pack.id).length}{" "}
+              {rulesOf(pack.id).length === 1 ? "rule" : "rules"}.
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+</Default>

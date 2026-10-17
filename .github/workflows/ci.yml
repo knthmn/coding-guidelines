@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [dev]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ASTRO_TELEMETRY_DISABLED: "1"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm fmt:check
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  publish:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Choose the published folder
+        id: target
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "dir=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=latest" >> "$GITHUB_OUTPUT"
+          fi
+      - run: pnpm build
+        env:
+          SITE_BASE: /${{ github.event.repository.name }}/${{ steps.target.outputs.dir }}/
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: ${{ steps.target.outputs.dir }}
+          keep_files: true
+      - name: Write the root redirect
+        if: github.ref_type == 'branch'
+        run: |
+          mkdir -p root
+          printf '<!doctype html><meta http-equiv="refresh" content="0; url=latest/"><link rel="canonical" href="latest/">\n' > root/index.html
+          touch root/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
+        if: github.ref_type == 'branch'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./root
+          keep_files: true
